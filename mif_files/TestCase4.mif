@@ -1,0 +1,21 @@
+Depth = 256;
+Width = 32;
+Address_radix = hex;
+Data_radix = bin;
+% Program RAM Data %					--  This program will test these insturctions:
+Content							--  lw, multu, mult, mfhi, mflo, mult, and j.
+  Begin
+00 : 10001100000100010000000000100100	;		-- lw $s1, 09($zero) / 	load word in address 09 + 0 to s1 // s1/r17 = F0000000
+01 : 10001100000100100000000000101000	;		-- lw $s2, 0A($zero) / 	load data in address 28 + 0 to s2 // s2/r18 = 00000002
+02 : 00000010001100100000000000011001	;		-- multu $s1, $s2  / 	mult unsigned s1 * s2 		  // HI= 1    ,LO= E00000000
+03 : 00000000000000001001100000010000	;		-- mfhi $s3	   / 	move from HI to s3 		  // s3/r19 = 1
+04 : 00000000000000001010000000010010	;		-- mflo $s4	   / 	move from LO to s4 		  // s4/r20 =E00000000
+05 : 00000010001100100000000000011000	;		-- mult $s1, $s2   / 	mult signed s1 * s2 		  // HI= FFFFFFFF ,LO= E00000000
+06 : 00000000000000001010100000010000	;		-- mfhi $s5	   / 	move from HI to s5 		  // s5/r21 = FFFFFFFF
+07 : 00000000000000001011000000010010	;		-- mflo $s6	   / 	move from LO to s6 		  // s6/r22 = E00000000 
+08 : 00001000000000000000000000001000	;		-- j  8	   / 	infinite loop
+09 : 11110000000000000000000000000000	;		-- F0000000
+0A : 00000000000000000000000000000010	;		-- 00000002
+
+
+End;

@@ -1,0 +1,105 @@
+Depth = 256;
+Width = 32;
+Address_radix = hex;
+Data_radix = bin;
+% Program RAM Data %					--  This program will load a series of different positive integer and display them in the ascending order
+Content							-- To use this program correctly follow this steps
+							-- Step1:	select the size then enable Inport0
+							-- step2: 	select the first entry then enable inport1
+							-- step3:	press the  reset button
+							-- step3: 	change the entry value and enable inport1 for size-1 times
+							-- All the entries will get displayed continuously in the ascending order
+  Begin
+
+												--  In this part, we will load the size of the series and the unique entries
+												--  The entries will be stored in table starts with the address 0xC4 
+
+00 : 00100100000100100000000011000100	;		-- addiu $s2, $zero, address		// load the table address to S2/R18
+01 : 10001100000100001111111111111000	;		-- lw $s0, FFF8($zero)     		// load the size of the table from Inport0 to S0/R16				
+02 : 00000010000000000100000000100001	;		-- add $t0, $s0, $Zero			// copy the size of the table to t0/R8, will be used as a counter
+03 : 10001100000100011111111111111100	;		-- lw $s1, FFFC($zer0)			// load the first entry of the table from Inport1 to S1/R17
+
+         					--Store :
+04 : 10101110010100010000000000000000	;		-- sw $s1, 0($s2)			// store S1/R17 in the address pointed by S2/R18
+05 : 00100110010100100000000000000100	;		-- addui $S2, $s2, 4			// increment address 
+06 : 01000001000010000000000000000001	;		-- subiu $t0, $t0, 1			// decrement the counter
+07 : 00010000000010000000000000000100	;		-- beq   $t0, $zero, sort		// if the counter = 0, branch to "Sort", else load the next entry
+						--loop :
+08 : 10001100000100111111111111111100	;		-- lw $s3, FFFC($zero)			// load the next entry to S3/R19
+09 : 00010010011100011111111111111110	;		-- beq $s3, $s1, loop			// keep loading until the user changes the value in Inport1
+0A : 00000010011000001000100000100001	; 		-- add $s1, $s3, $zero	 		// copy S3 to S1 and jump to "Store"
+0B : 00001000000000000000000000000100	;		-- j store				// jump to "Store"
+
+												-- IN this part we will apply the Bubble sort to sort 
+												-- all the entries in the same memory space
+		
+						-- Sort:		
+0C : 00100100000101000000000000000001	;		-- addui $S4, $Zero, 1			// load immediate 1 to S4/R20 , the counter for the innerloop
+0D : 00100100000101010000000000000001	;		-- addui $S5, $Zero, 1			// load immediate 1 to S5/R21 , the counter for the outerloop
+
+						-- InnerLoop_init:
+0E : 00100100000100100000000011000100	;		-- addiu $s2, $zero, address		// load the table address to S2/R18
+
+
+						-- InnerLoop:
+0F : 00000010000101000100100000100011	;		-- Subu $t1, $s0, s4			// t1 = size - s4
+10 : 00010001001000000000000000001001	;		-- beq $t1, $zero, OUTERLOOP		// if t1 ==0,break and check the outerloop
+11 : 10001110010010100000000000000000	;		-- lw $t2, 0($s2)			// load from mem[s2] to t2
+12 : 10001110010010110000000000000100	;		-- lw $t3, 4($s2)			// load form mem[s2+4] to t3
+13 : 00000001011010100110000000101011	;		-- sltu $t4, $t3, $t2			// if t3 < t2, t4 = 1; else t4 =0
+14 : 00010001100000000000000000000010	;		-- beq $t4, $zero, skip			// if t4 == 0, branch to skip
+15 : 10101110010010110000000000000000	;		-- sw $t3, 0($s2)			// swap the two entries
+16 : 10101110010010100000000000000100	;		-- sw $t2, 4($s2)
+
+						-- skip :
+17 : 00100110100101000000000000000001	;		-- addiu $s4, $s4, 1			// increment the innerCounter
+18 : 00100110010100100000000000000100	;		-- addiu $s2, $s2, 4			// increment the address
+19 : 00001000000000000000000000001111	;		-- j InnerLoop				// repeat
+
+						-- OUTERLOOP:
+1A : 00000010000101010100100000100011	;		-- Subu $t1, $s0, s5			// t1 = size - s5
+1B : 00010001001000000000000000000011	;		-- beq $t1, $zero, display		// if t1 ==0,break and branch to "display"
+1C : 00100110101101000000000000000001	;		-- addui $S4, $S5, 1			// S4 = S5+1 to decrease to number of compares
+1D : 00100110101101010000000000000001	;		-- addiu $s5, $s5, 1			// increment S5
+1E : 00001000000000000000000000001110	;		-- j InnerLoop_init				// jump to the innerloop
+
+
+												-- In this part, we will load value from the memory
+												-- and store them in the ouport0
+
+						--display:		
+1F : 00100100000100100000000011000100	;		-- addiu $s2, $zero, address		// load the table address to S2/R18
+20 : 00000000000000001001100000100001	;		-- add	$s3, $zero, $zero		// reset S3 to 0, we could use a different register
+
+						--next_val:
+21 : 10001110010010010000000000000000	;		-- lw $t1, 0($s2)			// load from mem[s2] to t1
+22 : 10101100000010011111111111111100	;		-- sw $t1, FFFC($zero)			// store t1 to the outport1
+
+												-- the following nested loop will provide a 
+												-- delay of 1s between every 2 displays
+
+
+23 : 00100100000011000000000001111111	;		-- addiu $t4, $zero, 0x7F		// load t4 with the value 0x7F
+	
+						--delay1:		
+24 : 00100100000011010000000001111111	;		-- addiu $t5, $zero, 0x7F		// load t5 with the value 0x7F
+		
+						--delay2:	
+25 : 00100100000011100000000001111111	;		-- addiu $t6, $zero, 0x7F		// load t6 with the value 0x7F
+	
+						--delay3:
+26 : 01000001110011100000000000000001	;		-- subiu $t6, $t6, 1			// decrement t6
+27 : 00010101110000001111111111111110	;		-- bne $t6, $zero, delay3		// if t6 != branch to delay3	
+28 : 01000001101011010000000000000001	;		-- subiu $t5, $t5, 1			// decrement t5	
+29 : 00010101101000001111111111111011	;		-- bne $t5, $zero, delay2		// if t5 != branch to delay5	
+2A : 01000001100011000000000000000001	;		-- subiu $t4, $t4, 1			// decrement t4	
+2B : 00010101100000001111111111111000	;		-- bne $t4, $zero, delay1		// if t4 != branch to delay3	
+2C : 00100110010100100000000000000100	;		-- addiu $s2, $s2, 4			// increment the address 
+2D : 00100110011100110000000000000001	;		-- addiu $s3, $s3, 1			// increment the counter
+2E : 00000010000100110101001001100011	;		-- Subu $t2, $s0, $s3			// t2 = size - counter
+2F : 00010001010000001111111111101111	;		-- beq $t2, $zero, display		// if t2 == 0, jump to display
+30 : 00001000000000000000000000100001	;		-- j next_val				// else jump the next value in the table
+
+
+
+End;
